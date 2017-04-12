@@ -4,6 +4,7 @@ var http = require('http');
 
 let PORT = 8081;
 let IMAGES_PATH = __dirname + '/images';
+let HEADER_SIZE = 23;
 
 console.log('Listening on port:', PORT);
 
@@ -70,8 +71,8 @@ http.createServer(function (request, response)
 					var position = 0, layerCount = 8;
 					var buffers = [];
 
-					console.log('read header');
-					var buffer = new Buffer.allocUnsafe(22);
+					// console.log('read header');
+					var buffer = new Buffer.allocUnsafe(HEADER_SIZE);
 					fs.readSync(file, buffer, 0, buffer.length, position);
 
 					if (start === 1)
@@ -86,58 +87,62 @@ http.createServer(function (request, response)
 					console.log('layers:', layerCount = buffer.readInt32LE(5) & 0x0f);
 					console.log('width: ', buffer.readInt32LE(6));
 					console.log('height:', buffer.readInt32LE(10));
+					console.log('quality:', buffer.readUInt8(22));
 
 					for (var i = 0; i < layerCount; i++)
 					{
 						if (i + 1 > end)
-						{
-							console.log('Done.');
+						// {
+						// 	console.log('Done.');
 							break;
-						}
+						// }
 
 						var includeLayer = i + 1 >= start && i + 1 <= end;
 						
 						// read tree entry count
 						//	entries are 9B
 						var entryCountBuffer = new Buffer.allocUnsafe(4);
-						console.log('treeSize location:', position);
+						// console.log('treeSize location:', position);
 						position += fs.readSync(file, entryCountBuffer, 0, entryCountBuffer.length, position);
 
 						var treeSize = entryCountBuffer.readInt32LE();
-						console.log('treeSize:', treeSize, '|', treeSize * 9, 'B');
+						// console.log('treeSize:', treeSize, '|', treeSize * 9, 'B');
 						treeSize *= 9;
 
 						if (includeLayer)
-						{
-							console.log('layer included:', i + 1);
+						// {
+						// 	console.log('layer included:', i + 1);
 							buffers.push(entryCountBuffer);
-						}
-						else
-							console.log('layer skipped:', i + 1);
+						// }
+						// else
+						// 	console.log('layer skipped:', i + 1);
 
 						// read tree
 						var treeBuffer = new Buffer.allocUnsafe(treeSize);
-						console.log('treeBuffer.length:', treeBuffer.length);
-						console.log('treeBuffer bytes read:', fs.readSync(file, treeBuffer, 0, treeBuffer.length, position));
+						// console.log('treeBuffer.length:', treeBuffer.length);
+						// console.log('treeBuffer bytes read:', fs.readSync(file, treeBuffer, 0, treeBuffer.length, position));
+						fs.readSync(file, treeBuffer, 0, treeBuffer.length, position);
 						position += treeBuffer.length;
 						includeLayer && buffers.push(treeBuffer);
 
 						// read layer length
 						var layerLengthBuffer = new Buffer.allocUnsafe(4);
-						console.log('layerLengthBuffer bytes read:', fs.readSync(file, layerLengthBuffer, 0, layerLengthBuffer.length, position));
+						// console.log('layerLengthBuffer bytes read:', fs.readSync(file, layerLengthBuffer, 0, layerLengthBuffer.length, position));
+						fs.readSync(file, layerLengthBuffer, 0, layerLengthBuffer.length, position);
 						position += layerLengthBuffer.length;
 						includeLayer && buffers.push(layerLengthBuffer);
 
 						var layerLength = layerLengthBuffer.readInt32LE();
-						console.log('layerLength:', layerLength);
+						// console.log('layerLength:', layerLength);
 
 						var layerBuffer = new Buffer.allocUnsafe(layerLength);
-						console.log('layerBuffer bytes read:', fs.readSync(file, layerBuffer, 0, layerBuffer.length, position));
+						// console.log('layerBuffer bytes read:', fs.readSync(file, layerBuffer, 0, layerBuffer.length, position));
+						fs.readSync(file, layerBuffer, 0, layerBuffer.length, position);
 						position += layerBuffer.length;
 						includeLayer && buffers.push(layerBuffer);
 						
-						console.log('Total:', position);
-						console.log('=========================');
+						// console.log('Total:', position);
+						// console.log('=========================');
 					}
 
 					let imageData = Buffer.concat(buffers);
